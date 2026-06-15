@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G-IV SP Weight & Balance Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        .icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            margin-right: 0.75rem;
+            stroke-width: 1.5;
+        }
+        .time-input {
+            width: 4rem;
+        }
+        .seat {
+            border: 1px solid #4a5568;
+            background-color: #2d3748;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            text-align: center;
+            font-size: 0.75rem;
+            min-width: 50px;
+        }
+        .seat-input {
+            width: 50px;
+            background-color: #4a5568;
+            border: 1px solid #718096;
+            text-align: center;
+            border-radius: 0.25rem;
+        }
+        .table-box {
+            border: 2px solid #fdba74;
+            background-color: #4a5568;
+            border-radius: 0.25rem;
+            width: 20px;
+            height: 20px;
+            align-self: center;
+        }
+        .component {
+            border: 1px solid #4a5568;
+            background-color: #2d3748;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        .cg-table th, .cg-table td {
+            padding: 0.5rem 0.25rem;
+            text-align: right;
+            font-size: 0.875rem;
+            vertical-align: middle;
+        }
+        .cg-table th:first-child, .cg-table td:first-child {
+            text-align: left;
+            font-weight: 500;
+        }
+        .total-row {
+            background-color: #1f2937;
+            font-weight: bold;
+            color: #fcd34d;
+        }
+        .editable-cell-input {
+            width: 100%;
+            background-color: #4a5568;
+            border: 1px solid #718096;
+            text-align: right;
+            border-radius: 0.25rem;
+            padding-right: 0.25rem;
+        }
+        input:read-only {
+            background-color: #374151;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div id="login-page" class="flex flex-col items-center justify-center min-h-screen px-4">
+        <h1 class="text-3xl font-bold text-white mb-2 text-center">
+            Weight & Balance Application
+            <span class="block text-2xl text-amber-400 mt-2">Gulfstream IV SP SN1381</span>
+            <span class="block text-xl text-amber-400">PK-TWY</span>
+        </h1>
+        <p class="text-sm text-gray-400 mb-8">by SkyOps Solutions</p>
+        <div class="w-full max-w-sm p-6 bg-gray-800 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold text-center text-white mb-6">Login</h2>
+            <form id="login-form">
+                <div class="mb-4">
+                    <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                    <input type="text" id="username" class="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                    <input type="password" id="password" class="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-400" required>
+                </div>
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-2 px-4 rounded-lg">Login</button>
+                <p id="login-error" class="text-red-400 text-sm mt-4 text-center hidden"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="admin-page" class="hidden container mx-auto max-w-4xl p-4 sm:p-6 bg-gray-900 min-h-screen">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-white">Admin Settings</h1>
+            <button id="admin-logout-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">Logout</button>
+        </div>
+        
+        <!-- Expiry Settings -->
+        <div class="bg-gray-800 p-6 rounded-lg mb-6">
+            <h2 class="text-lg font-semibold text-white mb-4">Application Expiry Date</h2>
+            <div class="flex items-center space-x-4">
+                <label for="expiry-date-input" class="text-sm font-medium text-gray-300">Set Expiry Date:</label>
+                <input type="date" id="expiry-date-input" class="bg-gray-700 text-white p-2 border border-gray-600 rounded-md">
+            </div>
+            <button id="save-expiry-btn" class="mt-6 bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-2 px-4 rounded-lg">Save Date</button>
+            <p id="admin-message" class="text-green-400 text-sm mt-4 hidden"></p>
+        </div>
+
+        <!-- Pilot & Signature Settings -->
+        <div class="bg-gray-800 p-6 rounded-lg mb-6">
+            <h2 class="text-lg font-semibold text-white mb-4">Manajemen Pilot & Tanda Tangan</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Nama Pilot</label>
+                    <input type="text" id="new-pilot-name" placeholder="Misal: Capt. Budi" class="w-full bg-gray-700 text-white p-2 border border-gray-600 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">URL Gambar Tanda Tangan (Opsional)</label>
+                    <input type="text" id="new-pilot-url" placeholder="https://..." class="w-full bg-gray-700 text-white p-2 border border-gray-600 rounded-md">
+                </div>
+                <button id="add-pilot-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg md:w-auto w-full">Tambah Pilot</button>
+                <p id="pilot-admin-message" class="text-sm mt-2 hidden"></p>
+            </div>
+            <div class="mt-6">
+                <h3 class="text-md font-semibold text-gray-300 mb-2">Daftar Pilot Tersimpan:</h3>
+                <ul id="admin-pilots-list" class="space-y-2 text-sm text-gray-400 max-h-48 overflow-y-auto pr-2">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- Additional Crew Management -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Engineer Management -->
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h2 class="text-lg font-semibold text-white mb-4">Manajemen Engineer</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">Nama Engineer</label>
+                        <input type="text" id="new-engineer-name" placeholder="Misal: Diki Hariadi" class="w-full bg-gray-700 text-white p-2 border border-gray-600 rounded-md">
+                    </div>
+                    <button id="add-engineer-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg w-full">Tambah Engineer</button>
+                    <p id="engineer-admin-message" class="text-sm mt-2 hidden"></p>
+                </div>
+                <div class="mt-6">
+                    <h3 class="text-md font-semibold text-gray-300 mb-2">Daftar Engineer:</h3>
+                    <ul id="admin-engineer-list" class="space-y-2 text-sm text-gray-400 max-h-48 overflow-y-auto pr-2">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer with PDF and Save Button -->
+            <footer class="text-center mt-8 pb-4 flex flex-col items-center gap-3">
+                <div class="flex gap-4 justify-center flex-wrap">
+                    <button id="downloadPdfBtn" class="bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-2 px-4 rounded-lg">
+                        Download as PDF
+                    </button>
+                    <button id="saveCloudBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">
+                        Save to Database
+                    </button>
+                </div>
+                <p id="pdf-message" class="text-sm text-amber-400 hidden">Generating PDF...</p>
+                <p id="cloud-message" class="text-sm text-blue-400 hidden">Saving to database...</p>
+            </footer>
+
+        </div>
+    </div>
+    
+    <!-- Dynamically Populated Datalists -->
+    <datalist id="pic-names"></datalist>
+    <datalist id="copilot-names"></datalist>
+    <datalist id="engineer-names"></datalist>
+    <datalist id="cabin-service-names"></datalist>
+
+
+    <script>
+        // --- MASTER DATA (Akan diambil secara live dari Google Sheets) ---
+        let pilotsData = [];
+        let engineersData = ["-"]; // Tetap diberikan default "-" untuk pilihan kosong
+        let cabinServicesData = ["-"]; // Tetap diberikan default "-" untuk pilihan kosong
+        let users = {};
+
+        function updatePilotDatalists() {
+            const picDatalist = document.getElementById('pic-names');
+            const copilotDatalist = document.getElementById('copilot-names');
+            let optionsHtml = '';
+            pilotsData.forEach(pilot => {
+                optionsHtml += `<option value="${pilot.name}">\n`;
+            });
+            if (picDatalist) picDatalist.innerHTML = optionsHtml;
+            if (copilotDatalist) copilotDatalist.innerHTML = optionsHtml;
+        }
+
+        function updateOtherDatalists() {
+            const engDatalist = document.getElementById('engineer-names');
+            const cabDatalist = document.getElementById('cabin-service-names');
+            
+            if (engDatalist) {
+                engDatalist.innerHTML = engineersData.map(name => `<option value="${name}">`).join('\n');
+            }
+            if (cabDatalist) {
+                cabDatalist.innerHTML = cabinServicesData.map(name => `<option value="${name}">`).join('\n');
+            }
+        }
+
+        async function syncMasterData() {
+            const payload = {
+                action: 'syncMaster',
+                pilots: pilotsData,
+                engineers: engineersData,
+                cabinServices: cabinServicesData
+            };
+            try {
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload)
+                });
+                console.log('Master data sync requested.');
+            } catch (e) {
+                console.error('Sync failed', e);
+            }
+        }
+
+        function renderAdminPilotList() {
+            const listEl = document.getElementById('admin-pilots-list');
+            if(!listEl) return;
+            listEl.innerHTML = '';
+            pilotsData.forEach((pilot, index) => {
+                listEl.innerHTML += `
+                    <li class="flex justify-between items-center bg-gray-700 p-2 rounded border border-gray-600">
+                        <div>
+                            <span class="block text-white font-medium">${pilot.name}</span>
+                            <span class="block text-xs text-gray-400 overflow-hidden text-ellipsis w-48">${pilot.signatureUrl || 'Tanpa Tanda Tangan'}</span>
+                        </div>
+                        <button class="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs" onclick="removePilot(${index})">Hapus</button>
+                    </li>`;
+            });
+        }
+
+        function renderAdminOtherLists() {
+            const engList = document.getElementById('admin-engineer-list');
+            const cabList = document.getElementById('admin-cabin-list');
+            
+            if(engList) {
+                engList.innerHTML = engineersData.map((name, index) => `
+                    <li class="flex justify-between items-center bg-gray-700 p-2 rounded border border-gray-600">
+                        <span class="text-white font-medium">${name}</span>
+                        ${name !== '-' ? `<button class="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs" onclick="removeEngineer(${index})">Hapus</button>` : ''}
+                    </li>`).join('');
+            }
+            
+            if(cabList) {
+                cabList.innerHTML = cabinServicesData.map((name, index) => `
+                    <li class="flex justify-between items-center bg-gray-700 p-2 rounded border border-gray-600">
+                        <span class="text-white font-medium">${name}</span>
+                        ${name !== '-' ? `<button class="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-xs" onclick="removeCabinService(${index})">Hapus</button>` : ''}
+                    </li>`).join('');
+            }
+        }
+
+        window.removePilot = function(index) {
+            pilotsData.splice(index, 1);
+            renderAdminPilotList();
+            updatePilotDatalists();
+            syncMasterData();
+        };
+
+        window.removeEngineer = function(index) {
+            engineersData.splice(index, 1);
+            renderAdminOtherLists();
+            updateOtherDatalists();
+            syncMasterData();
+        };
+
+        window.removeCabinService = function(index) {
+            cabinServicesData.splice(index, 1);
+            renderAdminOtherLists();
+            updateOtherDatalists();
+            syncMasterData();
+        };
+
+        // Initialize lists on load
+        updatePilotDatalists();
+        updateOtherDatalists();
+
+        // --- EXPIRY & URL ---
+        const DEFAULT_EXPIRY_DATE = '2025-10-25';
+
+        // --- GOOGLE APPS SCRIPT URL ---
+        // Endpoint GAS anda harus dikonfigurasi agar saat dipanggil parameter ?action=getMasterData
+        // dapat mengembalikan JSON berisi objek { expiryDate, pilots, engineers, cabinServices, users }
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUUdXcym39tV32bo5fXp-VRrPAMaUgBshvq5kWR_1RFxUsdi_ymZRRNEXKighLs34MkA/exec'; 
+
+        // --- PAGE ELEMENTS ---
+        const loginPage = document.getElementById('login-page');
+        const appPage = document.getElementById('app-page');
+        const adminPage = document.getElementById('admin-page');
+        const expiredPage = document.getElementById('expired-page');
+        const loginForm = document.getElementById('login-form');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginError = document.getElementById('login-error');
+        const expiryDateInput = document.getElementById('expiry-date-input');
+        const saveExpiryBtn = document.getElementById('save-expiry-btn');
+        const adminMessage = document.getElementById('admin-message');
+        const appLogoutBtn = document.getElementById('app-logout-btn');
+        const adminLogoutBtn = document.getElementById('admin-logout-btn');
+
+        // --- ELEMENT SELECTORS ---
+        const inputs = { rampWeight: document.getElementById('rampWeight'), maxTakeoffWeight: document.getElementById('maxTakeoffWeight'), emptyWeight: document.getElementById('emptyWeight'), pilot: document.getElementById('pilot'), copilot: document.getElementById('copilot'), engineer: document.getElementById('engineer'), cabinService: document.getElementById('cabinService'), baggage: document.getElementById('baggage'), cockpitStorage: document.getElementById('cockpitStorage'), cabinStorage: document.getElementById('cabinStorage'), picName: document.getElementById('picName'), copilotName: document.getElementById('copilotName'), engineerName: document.getElementById('engineerName'), cabinServiceName: document.getElementById('cabinServiceName'), totalPob: document.getElementById('totalPob'), galley: document.getElementById('galley'), seat1: document.getElementById('seat1'), seat2: document.getElementById('seat2'), seat3: document.getElementById('seat3'), seat4: document.getElementById('seat4'), seat5: document.getElementById('seat5'), seat6: document.getElementById('seat6'), seat7: document.getElementById('seat7'), seat8: document.getElementById('seat8'), seat9: document.getElementById('seat9'), seat10: document.getElementById('seat10'), seat11: document.getElementById('seat11'), seat12: document.getElementById('seat12'), seat13: document.getElementById('seat13'), aftLavatory: document.getElementById('aftLavatory'), tripTimeHours: document.getElementById('tripTimeHours'), tripTimeMinutes: document.getElementById('tripTimeMinutes'), tripToAlternateHours: document.getElementById('tripToAlternateHours'), tripToAlternateMinutes: document.getElementById('tripToAlternateMinutes'), fuelConsumption: document.getElementById('fuelConsumption'), airspeed: document.getElementById('airspeed'), altitude: document.getElementById('altitude'), headwind: document.getElementById('headwind'), fuelOnBoard: document.getElementById('fuelOnBoard'), routeFrom: document.getElementById('routeFrom'), routeTo: document.getElementById('routeTo'), };
+        const outputs = { pilotSeatWt: document.getElementById('pilotSeatWt'), copilotSeatWt: document.getElementById('copilotSeatWt'), jumpseatWt: document.getElementById('jumpseatWt'), baggageLayoutWt: document.getElementById('baggageLayoutWt'), cgTableBody: document.getElementById('cg-table-body'), totalPayloadLbs: document.getElementById('totalPayloadLbs'), totalPayloadKg: document.getElementById('totalPayloadKg'), zfwResult: document.getElementById('zfwResult'), towResult: document.getElementById('towResult'), zfwStatus: document.getElementById('zfwStatus'), towStatus: document.getElementById('towStatus'), landingWeightResult: document.getElementById('landingWeightResult'), landingWeightStatus: document.getElementById('landingWeightStatus'), extraFuelResult: document.getElementById('extraFuelResult'), availablePayloadLbs: document.getElementById('availablePayloadLbs'), availablePayloadKg: document.getElementById('availablePayloadKg'), availablePassengers: document.getElementById('availablePassengers'), zfwMacResult: document.getElementById('zfwMacResult'), towMacResult: document.getElementById('towMacResult'), landingWeightMacResult: document.getElementById('landingWeightMacResult'), elevatorTrimResult: document.getElementById('elevatorTrimResult'), maxRange: document.getElementById('maxRange'), fuelTripRequired: document.getElementById('fuelTripRequired'), alternateFuel: document.getElementById('alternateFuel'), reserveFuel: document.getElementById('reserveFuel'), contingencyFuel: document.getElementById('contingencyFuel'), startTaxiFuel: document.getElementById('startTaxiFuel'), totalFuelRequired: document.getElementById('totalFuelRequired'), welcomeMessage: document.getElementById('welcome-message') };
+        let cgChart;
+        
+        // --- LOGIN & EXPIRY LOGIC ---
+        let appExpiryDate = null; 
+        let expiryCheckInterval; 
+
+        async function fetchMasterData() {
+             try {
+                // Request action getMasterData ke GAS untuk menarik seluruh data sheet
+                const response = await fetch(`${SCRIPT_URL}?action=getMasterData&t=${new Date().getTime()}`);
+                if (!response.ok) throw new Error(`Network response was not ok. Status: ${response.status}`);
+                const data = await response.json();
+                if (data.error) throw new Error(`Apps Script Error: ${data.error}`);
+                
+                if (appExpiryDate && appExpiryDate !== data.expiryDate) {
+                     console.log("Expiry date has been updated remotely. Re-checking status.");
+                     appExpiryDate = data.expiryDate;
+                     checkSessionValidity(); 
+                }
+                
+                appExpiryDate = data.expiryDate || appExpiryDate;
+                
+                // Assign data dari Google Sheets ke local memory variable
+                if (data.pilots) pilotsData = data.pilots;
+                if (data.engineers) engineersData = data.engineers;
+                if (data.cabinServices) cabinServicesData = data.cabinServices;
+                if (data.users) users = data.users;
+
+                // Update UI dengan data yang baru ditarik
+                updatePilotDatalists();
+                updateOtherDatalists();
+                
+                return appExpiryDate;
+
+            } catch (error) {
+                console.warn("Gagal mengambil data master terbaru dari server:", error);
+                return appExpiryDate; 
+            }
+        }
+
+        function checkSessionValidity() {
+            if (!appExpiryDate) return;
+
+            const expiryDate = new Date(appExpiryDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (today > expiryDate) {
+                console.log("Aplikasi kedaluwarsa berdasarkan data terbaru. Mengakhiri sesi.");
+                handleLogout(true);
+            }
+            updateExpiryCountdown();
+        }
+
+        async function initialExpiryCheck() {
+            const date = await fetchMasterData();
+            if (!date) {
+                console.warn("Tidak dapat mengambil tanggal kedaluwarsa dari server, menggunakan tanggal default.");
+                appExpiryDate = DEFAULT_EXPIRY_DATE; 
+            }
+            return checkIsExpiredNow();
+        }
+
+        function checkIsExpiredNow() {
+            if (!appExpiryDate) return true; 
+            const expiryDate = new Date(appExpiryDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return today > expiryDate;
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const loginButton = loginForm.querySelector('button');
+            
+            loginButton.disabled = true;
+            loginButton.textContent = 'Fetching data & Verifying...';
+            loginError.classList.add('hidden'); 
+
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+
+            try {
+                // Tarik data secara aktual agar validasi akun mencakup data user terbaru
+                await fetchMasterData();
+                const user = users[username];
+
+                if (user && user.password === password) {
+                    const isExpired = checkIsExpiredNow(); // Tidak perlu await initial check lagi karena fetchMasterData sudah dipanggil di atas
+                    if (isExpired && user.role !== 'admin') {
+                        loginPage.classList.add('hidden');
+                        if (expiredPage) expiredPage.classList.remove('hidden');
+                    } else {
+                        if (user.role === 'admin') {
+                            loginPage.classList.add('hidden');
+                            adminPage.classList.remove('hidden');
+                            expiryDateInput.value = appExpiryDate;
+                            renderAdminPilotList(); 
+                            renderAdminOtherLists(); 
+                        } else {
+                            loginPage.classList.add('hidden');
+                            appPage.classList.remove('hidden');
+                            outputs.welcomeMessage.textContent = user.greeting || "Welcome!";
+                            if (!cgChart) {
+                                initializeCgEnvelope();
+                            }
+                            calculateAll();
+                            updateExpiryCountdown();
+                            if (expiryCheckInterval) clearInterval(expiryCheckInterval);
+                            
+                            // Ganti interval pengecekan dari 'fetchLatestExpiryDate' ke 'fetchMasterData'
+                            expiryCheckInterval = setInterval(fetchMasterData, 15000); 
+                        }
+                    }
+                } else {
+                    loginError.textContent = 'Invalid username or password. (Note: Data user harus tersedia di Google Sheets)';
+                    loginError.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Login failed:", error);
+                loginError.textContent = 'Login failed. Please check your connection and try again.';
+                loginError.classList.remove('hidden');
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = 'Login';
+            }
+        }
+        
+        function handleLogout(isExpired = false) { 
+            if (expiryCheckInterval) {
+                clearInterval(expiryCheckInterval); 
+                expiryCheckInterval = null;
+            }
+            appPage.classList.add('hidden'); 
+            adminPage.classList.add('hidden'); 
+            
+            if (isExpired) {
+                 expiredPage.classList.remove('hidden'); 
+                 loginPage.classList.add('hidden');
+            } else {
+                 expiredPage.classList.add('hidden');
+                 loginPage.classList.remove('hidden'); 
+            }
+            
+            loginForm.reset(); 
+            loginError.classList.add('hidden'); 
+            outputs.welcomeMessage.textContent = ''; 
+        }
+
+        async function handleSaveExpiry() {
+            const newDate = expiryDateInput.value;
+            if (newDate) {
+                adminMessage.textContent = 'Saving...';
+                adminMessage.classList.remove('hidden', 'text-red-400', 'text-green-400');
+                
+                const postUrl = new URL(SCRIPT_URL);
+                postUrl.searchParams.append('date', newDate);
+
+                try {
+                    fetch(postUrl, { method: 'POST', mode: 'no-cors' });
+                    appExpiryDate = newDate; 
+                    adminMessage.textContent = 'Expiry date save request sent!';
+                    adminMessage.classList.add('text-green-400');
+                    console.log("Save request sent for new expiry date:", newDate);
+
+                } catch (error) {
+                    console.error("Error sending save request:", error);
+                    adminMessage.textContent = 'Failed to send request.';
+                    adminMessage.classList.add('text-red-400');
+                } finally {
+                    setTimeout(() => adminMessage.classList.add('hidden'), 4000);
+                }
+            }
+        }
+
+        // --- HANDLE TAMBAH PILOT VIA ADMIN ---
+        document.getElementById('add-pilot-btn').addEventListener('click', () => {
+            const nameInput = document.getElementById('new-pilot-name');
+            const urlInput = document.getElementById('new-pilot-url');
+            const msg = document.getElementById('pilot-admin-message');
+
+            const name = nameInput.value.trim();
+            const url = urlInput.value.trim();
+
+            if(name) {
+                pilotsData.push({ name: name, signatureUrl: url });
+                nameInput.value = '';
+                urlInput.value = '';
+                msg.textContent = 'Pilot berhasil ditambahkan!';
+                msg.className = 'text-sm mt-2 text-green-400';
+                msg.classList.remove('hidden');
+                
+                renderAdminPilotList();
+                updatePilotDatalists();
+                syncMasterData();
+                
+                setTimeout(() => { msg.classList.add('hidden'); }, 3000);
+            } else {
+                msg.textContent = 'Nama pilot tidak boleh kosong.';
+                msg.className = 'text-sm mt-2 text-red-400';
+                msg.classList.remove('hidden');
+            }
+        });
+
+        // --- HANDLE TAMBAH ENGINEER VIA ADMIN ---
+        document.getElementById('add-engineer-btn').addEventListener('click', () => {
+            const nameInput = document.getElementById('new-engineer-name');
+            const msg = document.getElementById('engineer-admin-message');
+            const name = nameInput.value.trim();
+
+            if(name) {
+                engineersData.push(name);
+                nameInput.value = '';
+                msg.textContent = 'Engineer berhasil ditambahkan!';
+                msg.className = 'text-sm mt-2 text-green-400';
+                msg.classList.remove('hidden');
+                
+                renderAdminOtherLists();
+                updateOtherDatalists();
+                syncMasterData();
+                
+                setTimeout(() => { msg.classList.add('hidden'); }, 3000);
+            } else {
+                msg.textContent = 'Nama engineer tidak boleh kosong.';
+                msg.className = 'text-sm mt-2 text-red-400';
+                msg.classList.remove('hidden');
+            }
+        });
+
+        // --- HANDLE TAMBAH CABIN SERVICE VIA ADMIN ---
+        document.getElementById('add-cabin-btn').addEventListener('click', () => {
+            const nameInput = document.getElementById('new-cabin-name');
+            const msg = document.getElementById('cabin-admin-message');
+            const name = nameInput.value.trim();
+
+            if(name) {
+                cabinServicesData.push(name);
+                nameInput.value = '';
+                msg.textContent = 'Cabin Service berhasil ditambahkan!';
+                msg.className = 'text-sm mt-2 text-green-400';
+                msg.classList.remove('hidden');
+                
+                renderAdminOtherLists();
+                updateOtherDatalists();
+                syncMasterData();
+                
+                setTimeout(() => { msg.classList.add('hidden'); }, 3000);
+            } else {
+                msg.textContent = 'Nama Cabin Service tidak boleh kosong.';
+                msg.className = 'text-sm mt-2 text-red-400';
+                msg.classList.remove('hidden');
+            }
+        });
+
+        async function updateExpiryCountdown() {
+            try {
+                if (!appExpiryDate) throw new Error("Could not get expiry date");
+
+                document.getElementById('expiry-date-display').textContent = `This Application is valid until ${new Date(appExpiryDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`;
+                const expiryDate = new Date(appExpiryDate);
+                expiryDate.setDate(expiryDate.getDate() + 1);
+                const currentDate = new Date();
+                const timeDiff = expiryDate.getTime() - currentDate.getTime();
+                const daysLeft = Math.floor(timeDiff / (1000 * 3600 * 24));
+                const countdownElement = document.getElementById('expiry-countdown');
+                if (daysLeft >= 0) {
+                    countdownElement.textContent = `Remaining validity: ${daysLeft} days`;
+                    countdownElement.classList.remove('text-red-400');
+                    countdownElement.classList.add('text-amber-400');
+                } else {
+                    countdownElement.textContent = 'Application Expired';
+                    countdownElement.classList.remove('text-amber-400');
+                    countdownElement.classList.add('text-red-400');
+                }
+            } catch (error) {
+                 document.getElementById('expiry-date-display').textContent = 'Could not retrieve expiry date.';
+                 document.getElementById('expiry-countdown').textContent = 'Please check your connection.';
+            }
+        }
+
+        // --- CONSTANTS ---
+        const KG_TO_LBS = 2.20462;
+        const BASE_ALTITUDE = 45000;
+        const BASE_TRIP_FUEL = 5129; 
+        const BASE_TRIP_TIME_HOURS = 1 + (25 / 60); 
+        const BASE_FUEL_BURN = BASE_TRIP_FUEL / BASE_TRIP_TIME_HOURS; 
+        const ALTITUDE_ADJUSTMENT_FACTOR = 0.005; 
+
+        // --- MAC LOOKUP TABLE ---
+        const MAC_TABLE = {
+            430: [25.4, 25.5, 25.6, 25.7, 25.7, 25.8, 25.8, 25.9, 25.9, 26.0], 431: [26.1, 26.1, 26.2, 26.3, 26.3, 26.4, 26.4, 26.5, 26.5, 26.6], 432: [26.7, 26.7, 26.8, 26.9, 27.0, 27.1, 27.1, 27.2, 27.2, 27.3], 433: [27.3, 27.3, 27.4, 27.5, 27.5, 27.6, 27.6, 27.7, 27.7, 27.8], 434: [27.9, 28.0, 28.0, 28.1, 28.1, 28.2, 28.2, 28.3, 28.3, 28.4], 435: [28.5, 28.5, 28.6, 28.6, 28.7, 28.8, 28.8, 28.9, 28.9, 29.0], 436: [29.1, 29.1, 29.2, 29.2, 29.3, 29.4, 29.4, 29.5, 29.5, 29.6], 437: [30.3, 30.3, 30.4, 30.4, 30.5, 30.6, 30.6, 30.7, 30.7, 30.8], 438: [30.9, 30.9, 31.0, 31.1, 31.2, 31.3, 31.3, 31.4, 31.4, 31.5], 439: [31.5, 31.5, 31.6, 31.6, 31.7, 31.8, 31.8, 31.9, 31.9, 32.0], 440: [32.1, 32.1, 32.2, 32.3, 32.3, 32.4, 32.4, 32.5, 32.5, 32.6], 441: [32.7, 32.7, 32.8, 32.9, 33.0, 33.1, 33.1, 33.2, 33.3, 33.3], 442: [33.3, 33.3, 33.4, 33.5, 33.5, 33.6, 33.6, 33.7, 33.7, 33.8], 443: [33.9, 33.9, 34.0, 34.1, 34.2, 34.3, 34.3, 34.4, 34.4, 34.5], 444: [34.5, 34.6, 34.6, 34.7, 34.7, 34.8, 34.8, 34.9, 34.9, 35.0], 445: [35.1, 35.2, 35.2, 35.3, 35.3, 35.4, 35.4, 35.5, 35.5, 35.6], 446: [35.7, 35.8, 35.8, 35.9, 36.0, 36.1, 36.1, 36.2, 36.2, 36.3], 447: [36.3, 36.4, 36.4, 36.5, 36.6, 36.7, 36.7, 36.8, 36.8, 36.9], 448: [36.9, 37.0, 37.0, 37.1, 37.2, 37.3, 37.3, 37.4, 37.4, 37.5], 449: [37.5, 37.6, 37.6, 37.7, 37.8, 37.9, 37.9, 38.0, 38.0, 38.1], 450: [38.1, 38.2, 38.2, 38.3, 38.4, 38.5, 38.5, 38.6, 38.6, 38.7], 451: [38.1, 38.1, 38.2, 38.3, 38.3, 38.4, 38.4, 38.5, 38.5, 38.6], 452: [38.7, 38.7, 38.8, 38.8, 38.9, 39.0, 39.0, 39.1, 39.1, 39.2], 453: [39.3, 39.3, 39.4, 39.5, 39.5, 39.6, 39.6, 39.7, 39.7, 39.8], 454: [39.9, 39.9, 40.0, 40.1, 40.1, 40.2, 40.2, 40.3, 40.3, 40.4], 455: [40.5, 40.5, 40.6, 40.7, 40.7, 40.8, 40.8, 40.9, 40.9, 41.0], 456: [41.1, 41.1, 41.2, 41.3, 41.3, 41.4, 41.4, 41.5, 41.5, 41.6], 457: [41.7, 41.7, 41.8, 41.9, 41.9, 42.0, 42.0, 42.1, 42.1, 42.2], 458: [42.3, 42.3, 42.4, 42.5, 42.5, 42.6, 42.6, 42.7, 42.7, 42.8, 42.9], 459: [42.9, 42.9, 43.0, 43.1, 43.1, 43.2, 43.2, 43.3, 43.3, 43.4], 460: [43.5, 43.5, 43.6, 43.7, 43.7, 43.8, 43.8, 43.9, 43.9, 44.0], 461: [44.1, 44.1, 44.2, 44.3, 44.3, 44.4, 44.4, 44.5, 44.5, 44.6], 462: [44.7, 44.7, 44.8, 44.9, 44.9, 45.0, 45.0, 45.1, 45.1, 45.2], 463: [45.3, 45.3, 45.4, 45.5, 45.5, 45.6, 45.6, 45.7, 45.7, 45.8], 464: [45.9, 45.9, 46.0, 46.1, 46.1, 46.2, 46.2, 46.3, 46.3, 46.4], 465: [46.5, 46.5, 46.6, 46.7, 46.7, 46.8, 46.8, 46.9, 46.9, 47.0], 466: [47.1, 47.1, 47.2, 47.3, 47.3, 47.4, 47.4, 47.5, 47.5, 47.6], 467: [47.7, 47.7, 47.8, 47.9, 47.9, 48.0, 48.0, 48.1, 48.1, 48.2], 468: [48.3, 48.3, 48.4, 48.5, 48.5, 48.6, 48.6, 48.7, 48.7, 48.8], 469: [48.9, 48.9, 49.0, 49.1, 49.1, 49.2, 49.2, 49.3, 49.3, 49.4], 470: [49.5, 49.5, 49.6, 49.7, 49.7, 49.8, 49.8, 49.9, 49.9, 50.0],
+        };
+        const ELEVATOR_TRIM_TABLE = { 29000: { 36: 11, 37: 10, 38: 9, 39: 8, 40: 7, 41: 6, 42: 5, 43: 4, 44: 3, 45: 2 }, 28000: { 36: 11, 37: 10, 38: 9, 39: 8, 40: 7, 41: 6, 42: 5, 43: 4, 44: 3, 45: 2 }, 27000: { 36: 11, 37: 10, 38: 9, 39: 8, 40: 7, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 26000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 25000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 24000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 23000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 22000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 21000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 20000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 19000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 18000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 17000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 16000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 7, 42: 6, 43: 5, 44: 4, 45: 3 }, 15000: { 36: 12, 37: 11, 38: 10, 39: 9, 40: 8, 41: 6, 42: 5, 43: 4, 44: 3, 45: 2 }, 14000: { 36: 12, 37: 11, 38: 10, 39: 8, 40: 7, 41: 6, 42: 5, 43: 4, 44: 3, 45: 1 }, 13000: { 36: 12, 37: 11, 38: 10, 39: 8, 40: 7, 41: 5, 42: 4, 43: 3, 44: 2, 45: 1 }, 12000: { 36: 12, 37: 11, 38: 10, 39: 8, 40: 7, 41: 5, 42: 4, 43: 3, 44: 2, 45: 1 }, 11000: { 36: 11, 37: 10, 38: 9, 39: 7, 40: 6, 41: 5, 42: 4, 43: 3, 44: 2, 45: 1 }, 10000: { 36: 11, 37: 9, 38: 8, 39: 7, 40: 6, 41: 5, 42: 4, 43: 3, 44: 2, 45: 1 }, 9000: { 36: 10, 37: 8, 38: 7, 39: 6, 40: 5, 41: 4, 42: 3, 43: 2, 44: 1, 45: -2 }, 8000: { 36: 9, 37: 8, 38: 7, 39: 5, 40: 4, 41: 3, 42: 2, 43: 1, 44: -1, 45: -3 }, 7000: { 36: 9, 37: 8, 38: 7, 39: 5, 40: 4, 41: 3, 42: 2, 43: 1, 44: -1, 45: -4 }, 6000: { 36: 8, 37: 7, 38: 6, 39: 5, 40: 4, 41: 3, 42: 1, 43: -2, 44: -5, 45: -6 }, 5000: { 36: 7, 37: 6, 38: 5, 39: 3, 40: 2, 41: 0, 42: -1, 43: -3, 44: -4, 45: -7 }, 4000: { 36: 7, 37: 5, 38: 4, 39: 2, 40: 1, 41: -1, 42: -2, 43: -4, 44: -5, 45: -8 }, 3000: { 36: 7, 37: 5, 38: 4, 39: 2, 40: 1, 41: -1, 42: -3, 43: -5, 44: -6, 45: -9 }, 2000: { 36: 5, 37: 3, 38: 2, 39: 0, 40: -1, 41: -3, 42: -4, 43: -7, 44: -8, 45: -10 }, 1000: { 36: 5, 37: 3, 38: 2, 39: 0, 40: -1, 41: -3, 42: -6, 43: -7, 44: -9, 45: -11 }
+        };
+
+        // --- ARM VALUES ---
+        let ARMS = { emptyWeight: 457.99, crew: 123.0, cockpitStorage: 127.0, galley: 537.0, aftLavatory: 595.0, crewBaggage: 181.0,  jumpSeat: 140.0, cabinStorage: 415.0, seat1: 595.0, seat2: 237.0, seat3: 285.0, seat4: 285.0, seat5: 237.0, seat6: 331.0, seat7: 381.0, seat8: 331.0, seat9: 381.0, seat10: 439.0, seat11: 425.0, seat12: 425.0, seat13: 477.0, baggage: 637.0, fuel: 480.0 };
+        const EMPTY_WEIGHT_DEFAULT_MAC = 42.29;
+        
+        // --- HELPER FUNCTIONS ---
+        const kgToLbs = (kg) => (kg || 0) * KG_TO_LBS;
+        const calculateMoment = (weight, arm) => (weight || 0) * (arm || 0);
+        const getMacFromTable = (arm) => { if (!arm || arm < 430 || arm >= 471) return 0; const armInt = Math.floor(arm); const armDecIndex = Math.round((arm - armInt) * 10); if (armDecIndex > 9) { armInt += 1; armDecIndex = 0; } const row = MAC_TABLE[armInt]; if (row && row[armDecIndex] !== undefined) return row[armDecIndex]; return 0; };
+        const getElevatorTrimSetting = (zfwMac, fuelOnBoard) => { const fuelKey = Math.max(1000, Math.min(29000, Math.round(fuelOnBoard / 1000) * 1000)); const macKey = Math.max(36, Math.min(45, Math.round(zfwMac))); const fuelRow = ELEVATOR_TRIM_TABLE[fuelKey]; if (fuelRow) { const trimSetting = fuelRow[macKey]; if (trimSetting !== undefined) return trimSetting; } return "N/A"; };
+
+        // Fetches an image from URL and converts it to Base64 (untuk PDF jsPDF)
+        async function getBase64FromUrl(url) {
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // --- CORE CALCULATION FUNCTION ---
+        function calculateAll() {
+            const pilotKg = parseFloat(inputs.pilot.value) || 0; const copilotKg = parseFloat(inputs.copilot.value) || 0; const engineerKg = parseFloat(inputs.engineer.value) || 0; const cabinServiceKg = parseFloat(inputs.cabinService.value) || 0; const baggageKg = parseFloat(inputs.baggage.value) || 0; const cockpitStorageKg = parseFloat(inputs.cockpitStorage.value) || 0; const cabinStorageKg = parseFloat(inputs.cabinStorage.value) || 0;
+            const seatPayloadsKg = { galley: parseFloat(inputs.galley.value) || 0, seat1: parseFloat(inputs.seat1.value) || 0, seat2: parseFloat(inputs.seat2.value) || 0, seat3: parseFloat(inputs.seat3.value) || 0, seat4: parseFloat(inputs.seat4.value) || 0, seat5: parseFloat(inputs.seat5.value) || 0, seat6: parseFloat(inputs.seat6.value) || 0, seat7: parseFloat(inputs.seat7.value) || 0, seat8: parseFloat(inputs.seat8.value) || 0, seat9: parseFloat(inputs.seat9.value) || 0, seat10: parseFloat(inputs.seat10.value) || 0, seat11: parseFloat(inputs.seat11.value) || 0, seat12: parseFloat(inputs.seat12.value) || 0, seat13: parseFloat(inputs.seat13.value) || 0, aftLavatory: parseFloat(inputs.aftLavatory.value) || 0, };
+            const totalSeatPayloadKg = Object.values(seatPayloadsKg).reduce((sum, val) => sum + val, 0);
+            const maxTowLimit = parseFloat(inputs.maxTakeoffWeight.value) || 0; const maxZfwLimit = 49000; const emptyWeight = parseFloat(inputs.emptyWeight.value) || 0;
+            const tripTimeHours = parseFloat(inputs.tripTimeHours.value) || 0; const tripTimeMinutes = parseFloat(inputs.tripTimeMinutes.value) || 0; const currentAltitude = parseFloat(inputs.altitude.value) || 0; 
+            const altitudeDifference = currentAltitude - BASE_ALTITUDE; const altitudeAdjustment = (altitudeDifference / 1000) * ALTITUDE_ADJUSTMENT_FACTOR; const adjustedFuelBurn = BASE_FUEL_BURN * (1 - altitudeAdjustment);
+            inputs.fuelConsumption.value = adjustedFuelBurn.toFixed(1);
+            const totalTripTimeInHours = tripTimeHours + (tripTimeMinutes / 60); const calculatedTripFuel = totalTripTimeInHours * adjustedFuelBurn;
+            const airspeed = parseFloat(inputs.airspeed.value) || 0; const headwind = parseFloat(inputs.headwind.value) || 0; const fuelOnBoard = parseFloat(inputs.fuelOnBoard.value) || 0;
+            const totalPayloadKg = pilotKg + copilotKg + engineerKg + cabinServiceKg + baggageKg + cockpitStorageKg + cabinStorageKg + totalSeatPayloadKg; const totalPayloadLbs = totalPayloadKg * KG_TO_LBS;
+            const cgData = { emptyWeight: { weight: emptyWeight, arm: ARMS.emptyWeight, mac: EMPTY_WEIGHT_DEFAULT_MAC }, crew: { weight: kgToLbs(pilotKg + copilotKg), arm: ARMS.crew }, cockpitStorage: { weight: kgToLbs(cockpitStorageKg), arm: ARMS.cockpitStorage }, galley: { weight: kgToLbs(seatPayloadsKg.galley), arm: ARMS.galley }, aftLavatory: { weight: kgToLbs(seatPayloadsKg.aftLavatory), arm: ARMS.aftLavatory }, crewBaggage: { weight: kgToLbs(cabinServiceKg), arm: ARMS.crewBaggage }, jumpSeat: { weight: kgToLbs(engineerKg), arm: ARMS.jumpSeat }, cabinStorage: { weight: kgToLbs(cabinStorageKg), arm: ARMS.cabinStorage }, seat1: { weight: kgToLbs(seatPayloadsKg.seat1), arm: ARMS.seat1 }, seat2: { weight: kgToLbs(seatPayloadsKg.seat2), arm: ARMS.seat2 }, seat3: { weight: kgToLbs(seatPayloadsKg.seat3), arm: ARMS.seat3 }, seat4: { weight: kgToLbs(seatPayloadsKg.seat4), arm: ARMS.seat4 }, seat5: { weight: kgToLbs(seatPayloadsKg.seat5), arm: ARMS.seat5 }, seat6: { weight: kgToLbs(seatPayloadsKg.seat6), arm: ARMS.seat6 }, seat7: { weight: kgToLbs(seatPayloadsKg.seat7), arm: ARMS.seat7 }, seat8: { weight: kgToLbs(seatPayloadsKg.seat8), arm: ARMS.seat8 }, seat9: { weight: kgToLbs(seatPayloadsKg.seat9), arm: ARMS.seat9 }, seat10: { weight: kgToLbs(seatPayloadsKg.seat10), arm: ARMS.seat10 }, seat11: { weight: kgToLbs(seatPayloadsKg.seat11), arm: ARMS.seat11 }, seat12: { weight: kgToLbs(seatPayloadsKg.seat12), arm: ARMS.seat12 }, seat13: { weight: kgToLbs(seatPayloadsKg.seat13), arm: ARMS.seat13 }, baggage: { weight: kgToLbs(baggageKg), arm: ARMS.baggage }, fuel: { weight: fuelOnBoard, arm: ARMS.fuel }, tripFuel: { weight: -calculatedTripFuel, arm: ARMS.fuel }, };
+            for (const key in cgData) { cgData[key].moment = calculateMoment(cgData[key].weight, cgData[key].arm); }
+            const bowItems = ['emptyWeight', 'crew', 'cockpitStorage', 'galley', 'aftLavatory', 'crewBaggage', 'jumpSeat', 'cabinStorage']; const paxItems = ['seat1', 'seat2', 'seat3', 'seat4', 'seat5', 'seat6', 'seat7', 'seat8', 'seat9', 'seat10', 'seat11', 'seat12', 'seat13'];
+            const calculateTotal = (items) => { const total = { weight: 0, moment: 0, arm: 0, mac: 0 }; items.forEach(key => { if (cgData[key]) { total.weight += cgData[key].weight; total.moment += cgData[key].moment; } }); total.arm = total.weight > 0 ? total.moment / total.weight : 0; return total; };
+            const MAC_FORMULA_SLOPE = 0.6025; const MAC_FORMULA_INTERCEPT = -233.6508;
+            const bowTotal = calculateTotal(bowItems); bowTotal.mac = MAC_FORMULA_SLOPE * bowTotal.arm + MAC_FORMULA_INTERCEPT;
+            const paxTotal = calculateTotal(paxItems);
+            const zfwTotal = { weight: bowTotal.weight + paxTotal.weight + cgData.baggage.weight, moment: bowTotal.moment + paxTotal.moment + cgData.baggage.moment, }; zfwTotal.arm = zfwTotal.weight > 0 ? zfwTotal.moment / zfwTotal.weight : 0; zfwTotal.mac = getMacFromTable(zfwTotal.arm);
+            const towTotal = { weight: zfwTotal.weight + cgData.fuel.weight, moment: zfwTotal.moment + cgData.fuel.moment, }; towTotal.arm = towTotal.weight > 0 ? towTotal.moment / towTotal.weight : 0; towTotal.mac = MAC_FORMULA_SLOPE * towTotal.arm + MAC_FORMULA_INTERCEPT;
+            const lwTotal = { weight: towTotal.weight + cgData.tripFuel.weight, moment: towTotal.moment + cgData.tripFuel.moment, }; lwTotal.arm = lwTotal.weight > 0 ? lwTotal.moment / lwTotal.weight : 0; lwTotal.mac = MAC_FORMULA_SLOPE * lwTotal.arm + MAC_FORMULA_INTERCEPT;
+            updateCgTable(cgData, bowTotal, paxItems, zfwTotal, towTotal, lwTotal);
+            updateSummariesAndFlightCalc(totalPayloadKg, totalPayloadLbs, zfwTotal, towTotal, lwTotal, maxZfwLimit, maxTowLimit, adjustedFuelBurn, airspeed, headwind, fuelOnBoard, calculatedTripFuel);
+            updateCgEnvelope(zfwTotal, towTotal, lwTotal);
+            outputs.pilotSeatWt.textContent = pilotKg.toFixed(0); outputs.copilotSeatWt.textContent = copilotKg.toFixed(0); outputs.jumpseatWt.textContent = engineerKg.toFixed(0); outputs.baggageLayoutWt.textContent = baggageKg.toFixed(0);
+        }
+        function updateCgTable(cgData, bowTotal, paxItems, zfwTotal, towTotal, lwTotal) { const format = (val, dec = 0) => val.toFixed(dec); const formatMoment = (val) => (val / 1000).toFixed(2); let html = ''; const createRow = (label, data, isTotal = false, showMac = false) => { const weight = data.weight; const arm = data.arm; const moment = data.moment; let mac = 0; if (showMac) mac = isTotal ? data.mac : getMacFromTable(arm); const rowClass = isTotal ? 'total-row' : 'border-b border-gray-700'; return `<tr class="${rowClass}"><td>${label}</td><td>${format(weight, 1)}</td><td>${arm > 0 ? format(arm, 1) : '-'}</td><td>${formatMoment(moment)}</td><td>${mac > 0 ? format(mac, 2) : '-'}</td></tr>`; }; const createEditableEmptyWeightRow = (data) => { const weight = data.weight; const arm = data.arm; const moment = data.moment; const mac = data.mac; return `<tr class="border-b border-gray-700"><td>Empty Weight</td><td><input type="number" value="${weight.toFixed(2)}" class="editable-cell-input" id="emptyWeightInput"></td><td><input id="emptyWeightArmInput" type="number" value="${arm.toFixed(2)}" class="editable-cell-input"></td><td id="emptyWeightMomentCell">${formatMoment(moment)}</td><td><input id="emptyWeightMacInput" type="number" value="${mac.toFixed(2)}" class="editable-cell-input"></td></tr>`; }; html += createEditableEmptyWeightRow(cgData.emptyWeight); html += createRow('Crew', cgData.crew); html += createRow('Cockpit Storage', cgData.cockpitStorage); html += createRow('Galley', cgData.galley); html += createRow('Aft Lavatory', cgData.aftLavatory); html += createRow('Crew Baggage', cgData.crewBaggage); html += createRow('Jump Seat', cgData.jumpSeat); html += createRow('Cabin Storage', cgData.cabinStorage); html += createRow('Basic Operating Weight (BOW)', bowTotal, true, true); html += `<tr><td class="pt-4 font-semibold">Passengers:</td></tr>`; paxItems.forEach(key => { if(cgData[key] && cgData[key].weight > 0) html += createRow(key.charAt(0).toUpperCase() + key.slice(1), cgData[key]); }); html += createRow('Baggage', cgData.baggage); html += createRow('Zero Fuel Weight (ZFW)', zfwTotal, true, true); html += createRow('Fuel', cgData.fuel); html += createRow('Take Off Weight (TOW)', towTotal, true, true); html += createRow('Landing Weight (LW)', lwTotal, true, true); outputs.cgTableBody.innerHTML = html; document.getElementById('emptyWeightInput').addEventListener('input', (e) => { inputs.emptyWeight.value = parseFloat(e.target.value) || 0; calculateAll(); }); document.getElementById('emptyWeightArmInput').addEventListener('input', (e) => { ARMS.emptyWeight = parseFloat(e.target.value) || 0; calculateAll(); }); document.getElementById('emptyWeightMacInput').addEventListener('input', (e) => { cgData.emptyWeight.mac = parseFloat(e.target.value) || 0; calculateAll(); }); }
+        function updateSummariesAndFlightCalc(totalPayloadKg, totalPayloadLbs, zfwTotal, towTotal, lwTotal, maxZfwLimit, maxTowLimit, fuelConsumption, airspeed, headwind, fuelOnBoard, tripFuel) { outputs.totalPayloadKg.textContent = totalPayloadKg.toFixed(0); outputs.totalPayloadLbs.textContent = totalPayloadLbs.toFixed(0); outputs.zfwResult.textContent = zfwTotal.weight.toFixed(0); outputs.zfwMacResult.textContent = zfwTotal.mac.toFixed(2); updateStatus(outputs.zfwStatus, zfwTotal.weight, maxZfwLimit); outputs.towResult.textContent = towTotal.weight.toFixed(0); outputs.towMacResult.textContent = towTotal.mac.toFixed(2); updateStatus(outputs.towStatus, towTotal.weight, maxTowLimit); outputs.landingWeightResult.textContent = lwTotal.weight.toFixed(0); outputs.landingWeightMacResult.textContent = lwTotal.mac.toFixed(2); updateStatus(outputs.landingWeightStatus, lwTotal.weight, 66000); const availablePayloadLbs = maxTowLimit - towTotal.weight; const availablePayloadKg = availablePayloadLbs / KG_TO_LBS; const availablePassengers = availablePayloadKg > 0 ? Math.floor(availablePayloadKg / 80) : 0; outputs.availablePayloadLbs.textContent = availablePayloadLbs.toFixed(0); outputs.availablePayloadKg.textContent = availablePayloadKg.toFixed(0); outputs.availablePassengers.textContent = availablePassengers; const groundSpeed = airspeed - headwind; const maxRange = (fuelConsumption > 0 && groundSpeed > 0 && fuelOnBoard > 0) ? (fuelOnBoard / fuelConsumption) * groundSpeed : 0; outputs.maxRange.textContent = maxRange.toFixed(0); const fuelPerMinute = fuelConsumption > 0 ? fuelConsumption / 60 : 0; const totalAlternateTimeMinutes = (parseFloat(inputs.tripToAlternateHours.value) || 0) * 60 + (parseFloat(inputs.tripToAlternateMinutes.value) || 0); const calculatedAlternateFuel = totalAlternateTimeMinutes * fuelPerMinute; const calculatedReserveFuel = 30 * fuelPerMinute; const calculatedContingencyFuel = tripFuel * 0.10; const calculatedStartTaxiFuel = 400; const totalFuelRequired = tripFuel + calculatedAlternateFuel + calculatedReserveFuel + calculatedContingencyFuel + calculatedStartTaxiFuel; const extraFuel = fuelOnBoard - totalFuelRequired; outputs.extraFuelResult.textContent = extraFuel.toFixed(0); outputs.elevatorTrimResult.textContent = getElevatorTrimSetting(zfwTotal.mac, fuelOnBoard); outputs.fuelTripRequired.textContent = tripFuel.toFixed(1); outputs.alternateFuel.textContent = calculatedAlternateFuel.toFixed(1); outputs.reserveFuel.textContent = calculatedReserveFuel.toFixed(1); outputs.contingencyFuel.textContent = calculatedContingencyFuel.toFixed(1); outputs.startTaxiFuel.textContent = calculatedStartTaxiFuel.toFixed(1); outputs.totalFuelRequired.textContent = totalFuelRequired.toFixed(1); }
+        function updateStatus(element, value, limit) { element.classList.remove('text-green-500', 'text-red-500', 'text-yellow-400'); if (value <= 0) { element.textContent = 'Awaiting Input'; element.classList.add('text-yellow-400'); } else if (value > limit) { element.textContent = 'OVERWEIGHT'; element.classList.add('text-red-500'); } else { element.textContent = 'OK'; element.classList.add('text-green-500'); } }
+        function initializeCgEnvelope() { const ctx = document.getElementById('cgEnvelopeChart').getContext('2d'); const envelopeData = [ {x: 38, y: 39400}, {x: 36.4, y: 45000}, {x: 36.4, y: 46500}, {x: 41.3, y: 46500}, {x: 45, y: 44000}, {x: 45, y: 38000}, {x: 42, y: 38000}, {x: 38, y: 39400} ]; cgChart = new Chart(ctx, { type: 'line', data: { datasets: [ { label: 'CG Envelope', data: envelopeData, borderColor: '#fcd34d', backgroundColor: 'rgba(252, 211, 77, 0.2)', fill: true, borderWidth: 2, pointRadius: 0, order: 10 }, { label: 'ZFW', data: [], backgroundColor: '#34d399', pointRadius: 6, pointHoverRadius: 8, type: 'scatter', order: 0 }, { label: 'TOW', data: [], backgroundColor: '#60a5fa', pointRadius: 6, pointHoverRadius: 8, type: 'scatter', order: 0 }, { label: 'LW', data: [], backgroundColor: '#f87171', pointRadius: 6, pointHoverRadius: 8, type: 'scatter', order: 0 } ] }, options: { responsive: true, aspectRatio: 1, scales: { x: { type: 'linear', position: 'bottom', min: 25, max: 51, title: { display: true, text: '% MAC', color: '#9ca3af' }, ticks: { color: '#9ca3af', stepSize: 1 }, grid: { color: 'rgba(156, 163, 175, 0.2)' } }, y: { min: 36000, max: 77000, title: { display: true, text: 'GROSS WEIGHT – LBS', color: '#9ca3af' }, ticks: { color: '#9ca3af', stepSize: 1000, callback: (value) => (value % 1000 === 0) ? value : null }, grid: { color: 'rgba(156, 163, 175, 0.2)' } } }, plugins: { legend: { labels: { color: '#d1d5db' } }, annotation: { annotations: { maxRamp: { type: 'line', yMin: 75000, yMax: 75000, borderColor: 'rgb(239, 68, 68, 0.7)', borderWidth: 2, label: { content: 'Max Ramp', enabled: true, position: 'start', backgroundColor: 'rgba(239, 68, 68, 0.7)' } }, maxTakeoff: { type: 'line', yMin: 74600, yMax: 74600, borderColor: 'rgb(249, 115, 22, 0.7)', borderWidth: 2, label: { content: 'Max Takeoff', enabled: true, position: 'start', backgroundColor: 'rgba(249, 115, 22, 0.7)' } }, maxLanding: { type: 'line', yMin: 66000, yMax: 66000, borderColor: 'rgb(59, 130, 246, 0.7)', borderWidth: 2, label: { content: 'Max Landing Weight', enabled: true, position: 'start', yAdjust: -15, backgroundColor: 'rgba(59, 130, 246, 0.7)' } }, aftForwardLoading: { type: 'line', xMin: 36.4, xMax: 43.5, yMin: 45000, yMax: 45000, borderColor: 'rgb(16, 185, 129, 0.7)', borderWidth: 2, borderDash: [5, 5], label: { content: 'aft to forward loading', enabled: true, position: 'center', yAdjust: -10, backgroundColor: 'rgba(0,0,0,0)', color: 'rgb(16, 185, 129, 0.9)' } } } } } } }); }
+        function updateCgEnvelope(zfw, tow, lw) { if (!cgChart) return; cgChart.data.datasets[1].data = [{ x: zfw.mac, y: zfw.weight }]; cgChart.data.datasets[2].data = [{ x: tow.mac, y: tow.weight }]; cgChart.data.datasets[3].data = [{ x: lw.mac, y: lw.weight }]; cgChart.update(); }
+        
+        async function generateProfessionalPDF() {
+            const pdfMessage = document.getElementById('pdf-message'); pdfMessage.classList.remove('hidden');
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
+            doc.setFontSize(14); doc.setFont(undefined, 'bold'); doc.text('PT. TRANSWISATA PRIMA AVIATION', 105, 15, null, null, 'center'); 
+            doc.setFontSize(18); doc.text('Load Sheet Gulfstream IV SP SN1381', 105, 22, null, null, 'center'); 
+            doc.setFontSize(12); doc.setFont(undefined, 'normal'); doc.text(`Aircraft Registration: PK-TWY`, 105, 28, null, null, 'center'); 
+            doc.setFontSize(10); doc.text(`Date: ${new Date().toLocaleDateString('en-GB')}`, 105, 34, null, null, 'center');
+            
+            doc.setFont(undefined, 'bold');
+            doc.text('Doc. No: F/TWA-OPS/002-01', 14, 40);
+            doc.text('Effective Date: 01 October 2025', 210 - 14, 40, { align: 'right' });
+            doc.setFont(undefined, 'normal');
+
+            doc.autoTable({ 
+                startY: 45, 
+                head: [['Route Information', '']], 
+                body: [['From', inputs.routeFrom.value], ['Destination', inputs.routeTo.value],], 
+                theme: 'grid', 
+                headStyles: { fillColor: [45, 55, 72] }, 
+            });
+            doc.autoTable({ startY: doc.lastAutoTable.finalY + 10, head: [['Role', 'Name']], body: [['PIC', inputs.picName.value], ['Copilot', inputs.copilotName.value], ['Engineer', inputs.engineerName.value], ['Cabin Service', inputs.cabinServiceName.value], ['Total Person on Board (POB)', inputs.totalPob.value],], theme: 'grid', headStyles: { fillColor: [22, 163, 74] }, });
+            let finalY = doc.lastAutoTable.finalY;
+            const tripTime = `${inputs.tripTimeHours.value || 0} hr ${inputs.tripTimeMinutes.value || 0} min`; const alternateTime = `${inputs.tripToAlternateHours.value || 0} hr ${inputs.tripToAlternateMinutes.value || 0} min`;
+            doc.autoTable({ startY: finalY + 10, head: [['Flight Calculation', 'Value']], body: [['Trip Time', tripTime], ['Trip to Alternate', alternateTime], ['Altitude', `${inputs.altitude.value} ft`], ['Airspeed', `${inputs.airspeed.value} kts`], ['Headwind', `${inputs.headwind.value} kts`], ['Fuel on Board', `${inputs.fuelOnBoard.value} lbs`], ['Maximum Range', `${outputs.maxRange.textContent} nm`],], theme: 'grid', headStyles: { fillColor: [45, 55, 72] }, }); finalY = doc.lastAutoTable.finalY;
+            doc.autoTable({ startY: finalY + 10, head: [['Fuel Required', 'Value']], body: [['Fuel Consumption', `${inputs.fuelConsumption.value} lbs/hr`], ['Trip Fuel', `${outputs.fuelTripRequired.textContent} lbs`], ['Alternate Fuel', `${outputs.alternateFuel.textContent} lbs`], ['Final Reserve 30 min', `${outputs.reserveFuel.textContent} lbs`], ['Contingency (10%)', `${outputs.contingencyFuel.textContent} lbs`], ['Start & Taxi', `${outputs.startTaxiFuel.textContent} lbs`], ['TOTAL FUEL REQUIRED', `${outputs.totalFuelRequired.textContent} lbs`],], theme: 'grid', headStyles: { fillColor: [45, 55, 72] }, bodyStyles: { fontStyle: 'bold' }, didParseCell: function(data) { if (data.row.index === 6) { data.cell.styles.fillColor = '#1f2937'; data.cell.styles.textColor = '#fcd34d'; } } }); finalY = doc.lastAutoTable.finalY;
+            
+            const table = document.getElementById('cg-table-body'); let bodyData = []; table.querySelectorAll('tr').forEach(row => { let rowData = []; row.querySelectorAll('td').forEach(cell => { let cellText = cell.querySelector('input') ? cell.querySelector('input').value : cell.innerText; rowData.push(cellText); }); bodyData.push(rowData); });
+            
+            if (finalY + 20 > doc.internal.pageSize.getHeight() - 30) { doc.addPage(); finalY = 10; }
+            doc.autoTable({ startY: finalY + 10, head: [['Item', 'Weight (lbs)', 'Arm (in)', 'Moment', '%MAC']], body: bodyData, theme: 'striped', headStyles: { fillColor: [45, 55, 72] }, styles: { fontSize: 8 }, columnStyles: { 0: { cellWidth: 60 }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, }, didParseCell: function(data) { const originalTable = document.getElementById('cg-table-body'); const originalRow = originalTable.querySelectorAll('tr')[data.row.index]; if (originalRow && originalRow.classList.contains('total-row')) { data.cell.styles.fillColor = '#1f2937'; data.cell.styles.textColor = '#fcd34d'; data.cell.styles.fontStyle = 'bold'; } } }); 
+            finalY = doc.lastAutoTable.finalY;
+
+            // Elevator Trim
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.text('Elevator Trim Tab Setting:', 14, finalY + 10);
+            doc.setFont(undefined, 'normal');
+            doc.text(outputs.elevatorTrimResult.textContent, 65, finalY + 10);
+            finalY += 15;
+
+            // Weight Summary Table
+            if (finalY + 80 > doc.internal.pageSize.getHeight() - 20) {
+                doc.addPage();
+                finalY = 10;
+            }
+             const summaryBody = [
+                ['Total Payload', `${outputs.totalPayloadLbs.textContent} lbs / ${outputs.totalPayloadKg.textContent} kg`],
+                ['Zero Fuel Weight (ZFW)', `${outputs.zfwResult.textContent} lbs / ${outputs.zfwMacResult.textContent} %MAC (${outputs.zfwStatus.textContent})`],
+                ['Takeoff Weight (TOW)', `${outputs.towResult.textContent} lbs / ${outputs.towMacResult.textContent} %MAC (${outputs.towStatus.textContent})`],
+                ['Landing Weight (LW)', `${outputs.landingWeightResult.textContent} lbs / ${outputs.landingWeightMacResult.textContent} %MAC (${outputs.landingWeightStatus.textContent})`],
+                ['Extra Fuel', `${outputs.extraFuelResult.textContent} lbs`],
+                ['Available Payload', `${outputs.availablePayloadLbs.textContent} lbs / ${outputs.availablePayloadKg.textContent} kg`],
+            ];
+            doc.autoTable({
+                startY: finalY,
+                head: [['Weight Summary', 'Value']],
+                body: summaryBody,
+                theme: 'grid',
+                headStyles: { fillColor: [45, 55, 72] },
+                didParseCell: function(data) {
+                    if (data.column.index === 1) { 
+                        const cellText = data.cell.text[0];
+                        if (data.row.index >= 1 && data.row.index <= 3) { 
+                            if (cellText.includes('OK')) {
+                                data.cell.styles.textColor = [0, 150, 0]; 
+                            } else if (cellText.includes('OVERWEIGHT')) {
+                                data.cell.styles.textColor = [255, 0, 0]; 
+                            }
+                        }
+                        else if (data.row.index === 4 || data.row.index === 5) { 
+                             const numericValue = parseFloat(cellText.split(' ')[0]);
+                             if (numericValue >= 0) {
+                                 data.cell.styles.textColor = [0, 150, 0]; 
+                             } else {
+                                 data.cell.styles.textColor = [255, 0, 0]; 
+                             }
+                        }
+                    }
+                }
+            });
+            finalY = doc.lastAutoTable.finalY;
+
+
+            // CG Chart
+            const chartCanvas = document.getElementById('cgEnvelopeChart');
+            const chartImage = chartCanvas.toDataURL('image/png', 1.0);
+            const chartWidth = 90;
+            const chartHeight = 90;
+            const chartX = (doc.internal.pageSize.getWidth() - chartWidth) / 2;
+            
+            if (finalY + chartHeight + 10 > doc.internal.pageSize.getHeight() - 20) {
+                doc.addPage();
+                finalY = 10;
+            }
+            doc.addImage(chartImage, 'PNG', chartX, finalY + 10, chartWidth, chartHeight);
+            finalY += chartHeight + 20; 
+
+            // Signature and Certification Text
+            const neededHeight = 60; 
+            if (finalY + neededHeight > doc.internal.pageSize.getHeight() - 20) {
+                doc.addPage();
+                finalY = 20;
+            }
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const picName = inputs.picName.value || '_________________________';
+            
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+
+            // --- SISIPKAN TANDA TANGAN OTOMATIS BERDASARKAN PILOT ---
+            const selectedPilot = pilotsData.find(p => p.name === picName);
+            if (selectedPilot && selectedPilot.signatureUrl) {
+                try {
+                    const imgData = await getBase64FromUrl(selectedPilot.signatureUrl);
+                    doc.addImage(imgData, 'PNG', 14, finalY + 5, 40, 20); 
+                } catch (err) {
+                    console.warn("Gagal memuat tanda tangan (mungkin karena batasan CORS file Drive).", err);
+                }
+            }
+
+            // Draw line and text below the signature area
+            doc.text(picName, 14, finalY + 30);
+            doc.line(14, finalY + 31, 80, finalY + 31);
+            doc.text('Pilot in Command Signature', 14, finalY + 36);
+
+            doc.setTextColor(255, 0, 0); 
+            const certificationText = "I Certify That I Have Satisfied My Self That All Factors From The Basic Of Flight Preparation Laid Down By The Indonesia Civil Aviation As Covered In The Operation Manual of PT.Transwisata Prima Aviation";
+            const textLines = doc.splitTextToSize(certificationText, 95);
+            doc.setFontSize(8);
+            doc.text(textLines, pageWidth - 105, finalY + 15);
+            doc.setTextColor(0, 0, 0); 
+
+            // Add page numbers
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                const pageHeight = doc.internal.pageSize.getHeight();
+                doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, {
+                    align: 'center'
+                });
+            }
+
+            doc.save('G-IV_SP_SN1381_PK-TWY_Weight_Balance.pdf');
+            pdfMessage.classList.add('hidden');
+        }
+
+        // --- EVENT LISTENERS ---
+        Object.values(inputs).forEach(input => { if (input) { input.addEventListener('input', calculateAll); input.addEventListener('focus', (e) => { if (e.target.value !== '0' && e.target.value !== '') { e.target.dataset.originalValue = e.target.value; e.target.value = ''; } else if (e.target.value === '0') { e.target.dataset.originalValue = '0'; e.target.value = ''; } }); input.addEventListener('blur', (e) => { if (e.target.value === '' && e.target.dataset.originalValue) { e.target.value = e.target.dataset.originalValue; } else if (e.target.value === '' && !e.target.dataset.originalValue) { if (e.target.placeholder === '0' || e.target.value === '') { e.target.value = '0'; } } calculateAll(); }); } });
+        
+        inputs.engineerName.addEventListener('input', (e) => {
+            if (e.target.value === '-') {
+                inputs.engineer.value = 0;
+                calculateAll();
+            }
+        });
+
+        inputs.cabinServiceName.addEventListener('input', (e) => {
+            if (e.target.value === '-') {
+                inputs.cabinService.value = 0;
+                calculateAll();
+            }
+        });
+
+        loginForm.addEventListener('submit', handleLogin);
+        appLogoutBtn.addEventListener('click', () => handleLogout(false));
+        adminLogoutBtn.addEventListener('click', () => handleLogout(false));
+        saveExpiryBtn.addEventListener('click', handleSaveExpiry);
+        document.getElementById('downloadPdfBtn').addEventListener('click', generateProfessionalPDF);
+
+        document.getElementById('saveCloudBtn').addEventListener('click', async () => {
+            const cloudMsg = document.getElementById('cloud-message');
+            cloudMsg.textContent = "Saving to database...";
+            cloudMsg.className = "text-sm text-blue-400";
+            cloudMsg.classList.remove('hidden');
+
+            const flightData = {
+                action: 'saveFlight',
+                timestamp: new Date().toLocaleString('en-GB'),
+                picName: inputs.picName.value,
+                copilotName: inputs.copilotName.value,
+                engineerName: inputs.engineerName.value,
+                cabinServiceName: inputs.cabinServiceName.value,
+                routeFrom: inputs.routeFrom.value,
+                routeTo: inputs.routeTo.value,
+                zfwLbs: outputs.zfwResult.textContent,
+                zfwMac: outputs.zfwMacResult.textContent,
+                towLbs: outputs.towResult.textContent,
+                towMac: outputs.towMacResult.textContent,
+                lwLbs: outputs.landingWeightResult.textContent,
+                lwMac: outputs.landingWeightMacResult.textContent,
+                totalFuelRequired: outputs.totalFuelRequired.textContent,
+                maxTakeoffWeight: inputs.maxTakeoffWeight.value,
+                totalPayloadLbs: outputs.totalPayloadLbs.textContent,
+                elevatorTrim: outputs.elevatorTrimResult.textContent
+            };
+
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(flightData)
+                });
+                cloudMsg.textContent = "Data successfully saved!";
+                cloudMsg.className = "text-sm text-green-400";
+                setTimeout(() => cloudMsg.classList.add('hidden'), 3000);
+            } catch (error) {
+                console.error("Save failed:", error);
+                cloudMsg.textContent = "Failed to save data. Check connection.";
+                cloudMsg.className = "text-sm text-red-400";
+            }
+        });
+
+    </script>
+</body>
+</html>
